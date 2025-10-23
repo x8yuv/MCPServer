@@ -83,6 +83,34 @@ app.get('/mcp/tools', (_req, res) => {
 });
 
 
+// SSE endpoint for thesys.dev
+app.get('/sse', (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Cache-Control'
+  });
+
+  // Send server info
+  res.write(`data: ${JSON.stringify({
+    type: 'server_info',
+    name: 'weather',
+    version: '1.0.0',
+    tools: ['get_alerts', 'get_forecast']
+  })}\n\n`);
+
+  // Keep connection alive
+  const keepAlive = setInterval(() => {
+    res.write(`data: ${JSON.stringify({ type: 'ping', timestamp: Date.now() })}\n\n`);
+  }, 30000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+  });
+});
+
 app.post('/mcp/call', async (req, res) => {
   try {
     const { tool, params = {} } = req.body || {};
