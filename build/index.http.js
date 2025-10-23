@@ -2,9 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { z } from 'zod';
 import { getAlerts, getForecast, alertsSchema, forecastSchema } from './weather.js';
-import { MCPProtocolHandler } from './mcp-protocol.js';
 const app = express();
-const mcpHandler = new MCPProtocolHandler();
 // CORS configuration for thesys.dev
 app.use(cors({
     origin: '*',
@@ -75,67 +73,6 @@ app.get('/mcp/tools', (_req, res) => {
                 }
             }
         ]
-    });
-});
-// MCP JSON-RPC endpoint
-app.post('/mcp', async (req, res) => {
-    try {
-        const request = req.body;
-        if (!request.jsonrpc || request.jsonrpc !== '2.0') {
-            return res.status(400).json({
-                jsonrpc: '2.0',
-                id: request.id,
-                error: {
-                    code: -32600,
-                    message: 'Invalid Request'
-                }
-            });
-        }
-        const response = await mcpHandler.handleRequest(request);
-        res.json(response);
-    }
-    catch (error) {
-        console.error('MCP protocol error:', error);
-        res.status(500).json({
-            jsonrpc: '2.0',
-            id: req.body?.id,
-            error: {
-                code: -32603,
-                message: 'Internal error'
-            }
-        });
-    }
-});
-// SSE endpoint for streaming MCP protocol
-app.get('/mcp/sse', (req, res) => {
-    res.writeHead(200, {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Cache-Control'
-    });
-    // Send initial connection message
-    res.write(`data: ${JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'notifications/initialized',
-        params: {
-            protocolVersion: '2024-11-05',
-            capabilities: {
-                tools: {}
-            },
-            serverInfo: {
-                name: 'weather',
-                version: '1.0.0'
-            }
-        }
-    })}\n\n`);
-    // Keep connection alive
-    const keepAlive = setInterval(() => {
-        res.write(`data: ${JSON.stringify({ type: 'ping' })}\n\n`);
-    }, 30000);
-    req.on('close', () => {
-        clearInterval(keepAlive);
     });
 });
 app.post('/mcp/call', async (req, res) => {
