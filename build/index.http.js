@@ -2,7 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import { z } from 'zod';
 import { getAlerts, getForecast, alertsSchema, forecastSchema } from './weather.js';
+import { MCPProtocolHandler } from './mcp-protocol.js';
 const app = express();
+const mcpHandler = new MCPProtocolHandler();
 // CORS configuration for thesys.dev
 app.use(cors({
     origin: '*',
@@ -74,6 +76,35 @@ app.get('/mcp/tools', (_req, res) => {
             }
         ]
     });
+});
+// MCP JSON-RPC endpoint
+app.post('/mcp', async (req, res) => {
+    try {
+        const request = req.body;
+        if (!request.jsonrpc || request.jsonrpc !== '2.0') {
+            return res.status(400).json({
+                jsonrpc: '2.0',
+                id: request.id,
+                error: {
+                    code: -32600,
+                    message: 'Invalid Request'
+                }
+            });
+        }
+        const response = await mcpHandler.handleRequest(request);
+        res.json(response);
+    }
+    catch (error) {
+        console.error('MCP protocol error:', error);
+        res.status(500).json({
+            jsonrpc: '2.0',
+            id: req.body?.id,
+            error: {
+                code: -32603,
+                message: 'Internal error'
+            }
+        });
+    }
 });
 // SSE endpoint for streaming MCP protocol
 app.get('/mcp/sse', (req, res) => {
@@ -169,20 +200,40 @@ app.post('/mcp/call', async (req, res) => {
         });
     }
 });
-// Root endpoint with server info
+// Root endpoint with MCP server info
 app.get('/', (_req, res) => {
     res.json({
         name: 'Weather MCP Server',
         version: '1.0.0',
-        description: 'HTTP-based MCP server for weather data using National Weather Service API',
+        description: 'MCP server for weather data using National Weather Service API',
+        protocol: 'MCP JSON-RPC 2.0',
         endpoints: {
             health: '/health',
+            mcp: '/mcp',
+            sse: '/mcp/sse',
+            // Legacy REST endpoints
             info: '/mcp/info',
             tools: '/mcp/tools',
             call: '/mcp/call'
         },
         usage: {
-            example: {
+            mcp_jsonrpc: {
+                method: 'POST',
+                url: '/mcp',
+                body: {
+                    jsonrpc: '2.0',
+                    id: 1,
+                    method: 'tools/call',
+                    params: {
+                        name: 'get_forecast',
+                        arguments: {
+                            latitude: 40.7128,
+                            longitude: -74.0060
+                        }
+                    }
+                }
+            },
+            legacy_rest: {
                 method: 'POST',
                 url: '/mcp/call',
                 body: {
