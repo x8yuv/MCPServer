@@ -4,7 +4,7 @@
   "description": "",
   "license": "ISC",
   "type": "module",
-  "main": "build/index.js",
+  "main": "build/index.http.js",
   "files": [
     "build"
   ],
@@ -13,7 +13,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "start": "node build/index.js",
+    "start": "node build/index.http.js",
+    "start:stdio": "node build/index.js",
     "start:http": "node build/index.http.js",
     "dev": "tsc && node build/index.http.js"
   },

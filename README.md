@@ -76,13 +76,16 @@ To connect this MCP server to thesys.dev:
 3. Set environment variable `PORT` (Railway provides this automatically)
 4. Deploy and use the provided URL
 
-### Option 2: Render
+### Option 2: Render (Recommended)
 1. Create a new Web Service on Render
-2. Connect your GitHub repository
-3. Use these settings:
-   - **Build Command**: `npm run build`
-   - **Start Command**: `npm run start:http`
-4. Deploy and use the provided URL
+2. Connect your GitHub repository: `https://github.com/x8yuv/MCPServer.git`
+3. Use these **exact** settings:
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm start` (this now runs the HTTP server)
+   - **Environment**: Add `NODE_ENV=production`
+4. Deploy and use the provided `.onrender.com` URL
+
+**Important**: The default `npm start` now runs the HTTP server (`build/index.http.js`), not the stdio server.
 
 ### Option 3: Vercel
 1. Install Vercel CLI: `npm i -g vercel`
@@ -152,23 +155,38 @@ This server uses the National Weather Service API, which:
 
 ## Troubleshooting
 
+### Render Deployment Issues
+
+#### "Application exited early" Error
+This happens when Render runs the wrong entry point. **Solution:**
+1. Ensure `package.json` has `"start": "node build/index.http.js"`
+2. In Render settings, use **Start Command**: `npm start`
+3. **Never use** `node build/index.js` (that's the stdio server)
+
+#### Server Logs Show "running on stdio"
+This means the wrong server is running. **Fix:**
+1. Check Render **Start Command** is `npm start`
+2. Verify `package.json` main field is `"build/index.http.js"`
+3. Redeploy after making changes
+
 ### MAX_RETRIES_EXCEEDED Error
 This error typically occurs when:
 1. The server URL is incorrect or not accessible
-2. The server is not running
-3. CORS issues (should be resolved with current configuration)
+2. The server is not running (check Render logs)
+3. Using wrong transport type (must be `Streamable HTTP`)
 4. Network connectivity issues
 
 **Solutions:**
-1. Verify your deployed server is accessible via browser
-2. Check the health endpoint: `https://your-server.com/health`
+1. Verify your deployed server is accessible: `https://your-app.onrender.com/health`
+2. Check Render service logs for errors
 3. Ensure the server is running and responding
-4. Check server logs for any startup errors
+4. Test endpoints manually before connecting to thesys.dev
 
 ### Connection Issues
 1. Make sure you're using `Streamable HTTP` transport type in thesys.dev
 2. Verify the server URL is correct and publicly accessible
 3. Test the server endpoints manually before connecting to thesys.dev
+4. Check that Render service is "Live" (not sleeping)
 
 ## License
 

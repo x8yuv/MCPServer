@@ -180,9 +180,10 @@ app.use((_req, res) => {
     });
 });
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-    console.log(`Weather MCP HTTP Server running on http://localhost:${PORT}`);
-    console.log(`Health check: http://localhost:${PORT}/health`);
-    console.log(`Tools list: http://localhost:${PORT}/mcp/tools`);
+app.listen(Number(PORT), '0.0.0.0', () => {
+    console.log(`Weather MCP HTTP Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Health check: /health`);
+    console.log(`Tools list: /mcp/tools`);
 });
 export default app;
