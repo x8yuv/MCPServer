@@ -82,12 +82,48 @@ app.get('/mcp/tools', (_req, res) => {
   });
 });
 
+// SSE endpoint for streaming MCP protocol
+app.get('/mcp/sse', (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Cache-Control'
+  });
+
+  // Send initial connection message
+  res.write(`data: ${JSON.stringify({
+    jsonrpc: '2.0',
+    method: 'notifications/initialized',
+    params: {
+      protocolVersion: '2024-11-05',
+      capabilities: {
+        tools: {}
+      },
+      serverInfo: {
+        name: 'weather',
+        version: '1.0.0'
+      }
+    }
+  })}\n\n`);
+
+  // Keep connection alive
+  const keepAlive = setInterval(() => {
+    res.write(`data: ${JSON.stringify({ type: 'ping' })}\n\n`);
+  }, 30000);
+
+  req.on('close', () => {
+    clearInterval(keepAlive);
+  });
+});
+
 app.post('/mcp/call', async (req, res) => {
   try {
     const { tool, params = {} } = req.body || {};
     
     if (!tool) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Missing tool name',
         code: 'MISSING_TOOL'
       });
@@ -131,7 +167,7 @@ app.post('/mcp/call', async (req, res) => {
       }
 
       default:
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: `Unknown tool: ${tool}`,
           code: 'UNKNOWN_TOOL',
           availableTools: ['get_alerts', 'get_forecast']
@@ -139,7 +175,7 @@ app.post('/mcp/call', async (req, res) => {
     }
   } catch (error) {
     console.error('Error in MCP call:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Internal server error',
       code: 'INTERNAL_ERROR',
       message: error instanceof Error ? error.message : 'Unknown error'

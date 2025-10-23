@@ -75,6 +75,38 @@ app.get('/mcp/tools', (_req, res) => {
         ]
     });
 });
+// SSE endpoint for streaming MCP protocol
+app.get('/mcp/sse', (req, res) => {
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+    // Send initial connection message
+    res.write(`data: ${JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'notifications/initialized',
+        params: {
+            protocolVersion: '2024-11-05',
+            capabilities: {
+                tools: {}
+            },
+            serverInfo: {
+                name: 'weather',
+                version: '1.0.0'
+            }
+        }
+    })}\n\n`);
+    // Keep connection alive
+    const keepAlive = setInterval(() => {
+        res.write(`data: ${JSON.stringify({ type: 'ping' })}\n\n`);
+    }, 30000);
+    req.on('close', () => {
+        clearInterval(keepAlive);
+    });
+});
 app.post('/mcp/call', async (req, res) => {
     try {
         const { tool, params = {} } = req.body || {};
